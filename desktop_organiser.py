@@ -1,9 +1,9 @@
-from pathlib import Path
-import os
 import shutil
+import os
+from pathlib import Path
 import ctypes
 
-# Optimum way to get the Desktop folder path (0 is the Desktop code for special windows files).
+# Function to get Desktop path (Windows-specific)
 def get_desktop_path():
     csidl = 0
     buf = ctypes.create_unicode_buffer(260)
@@ -11,7 +11,8 @@ def get_desktop_path():
     return Path(buf.value)
 
 parent_path = get_desktop_path()
-print(parent_path)
+print(f"Desktop Path: {parent_path}")
+
 dir_list = os.listdir(parent_path)
 script_name = "desktop_organiser.py"
 
@@ -19,69 +20,68 @@ documents = []
 images = []
 other = []
 
-new_dirs = ['Documents', 'Images', 'Other']
-
+# Define destination folders
+new_dirs = ['DesktopCleanUp', 'Documents', 'Images', 'Other']
+desktop_cleanup_destination = os.path.join(parent_path, 'DesktopCleanUp')
 documents_destination = os.path.join(parent_path, 'Documents')
 images_destination = os.path.join(parent_path, 'Images')
 other_destination = os.path.join(parent_path, 'Other')
 
-
+# Categorize files
 for file in dir_list:
-    split_tup = os.path.splitext(file)
-    file_name = split_tup[0]
-    extension = split_tup[1]
+    file_path = os.path.join(parent_path, file)
 
+    # Skip directories
+    if os.path.isdir(file_path):
+        continue
 
-    if extension == '.png' or extension == '.jpg' or extension == '.gif':
+    file_name, extension = os.path.splitext(file)
+
+    if extension in ['.png', '.jpg', '.gif']:
         images.append(file)
-    elif extension == '.pdf' or extension == '.docx' or extension == '.txt':
+    elif extension in ['.pdf', '.docx', '.txt']:
         documents.append(file)
-    else:
-        for char in extension:
-            if char == ".":
-                other.append(file)
+    elif file != script_name:  # Avoid moving the script itself
+        other.append(file)
 
-
-# Check if folders exist if not create them on the Desktop
+# Create necessary folders if they don't exist
 for new_dir in new_dirs:
     temp_path = os.path.join(parent_path, new_dir)
-    if os.path.exists(temp_path):
-        print(f"{temp_path} already exists...")
-    else:
-        os.mkdir(temp_path)
-
+    os.makedirs(temp_path, exist_ok=True)
 
 # Move document files
-if not documents:
-    print("No documents found to be organised.")
-else:
+if documents:
     for file in documents:
-        temp_source = os.path.join(parent_path, file)
-        destination = shutil.move(temp_source, documents_destination)
-    
+        shutil.move(os.path.join(parent_path, file), documents_destination)
+else:
+    print("No documents found to be organized.")
+
 # Move image files
-if not images:
-    print("No images found to be orgranised.")
-else:
+if images:
     for file in images:
-        temp_source = os.path.join(parent_path, file)
-        destination = shutil.move(temp_source, images_destination)
-
-# Move  files
-if not other:
-    print("No other files found to be organised.")
+        shutil.move(os.path.join(parent_path, file), images_destination)
 else:
+    print("No images found to be organized.")
+
+# Move other files
+if other:
     for file in other:
-        if file == script_name:
-            print("No other files found to be organised.")
-            continue
-        temp_source = os.path.join(parent_path, file)
-        destination = shutil.move(temp_source, other_destination)
+        shutil.move(os.path.join(parent_path, file), other_destination)
+else:
+    print("No other files found to be organized.")
+
+# Move subfolders (Documents, Images, Other) into DesktopCleanUp
+for folder in [documents_destination, images_destination, other_destination]:
+    target_path = os.path.join(desktop_cleanup_destination, os.path.basename(folder))
     
+    if os.path.exists(target_path):
+        print(f"Skipping move: '{target_path}' already exists.")
+    else:
+        shutil.move(folder, desktop_cleanup_destination)
 
+# Remove empty folders left on Desktop
+for folder in [documents_destination, images_destination, other_destination]:
+    if os.path.exists(folder) and not os.listdir(folder):
+        os.rmdir(folder)
+        print(f"Removed empty folder: {folder}")
 
-def main():
-    return None
-
-if __name__ == "__main__":
-    main()
