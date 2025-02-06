@@ -1,8 +1,17 @@
 from pathlib import Path
 import os
 import shutil
+import ctypes
 
-parent_path = Path("C:/Users/ginge/OneDrive - University of South Wales/Desktop")
+# Optimum way to get the Desktop folder path (0 is the Desktop code for special windows files).
+def get_desktop_path():
+    csidl = 0
+    buf = ctypes.create_unicode_buffer(260)
+    ctypes.windll.shell32.SHGetFolderPathW(0, csidl, 0, 0, buf)
+    return Path(buf.value)
+
+parent_path = get_desktop_path()
+print(parent_path)
 dir_list = os.listdir(parent_path)
 script_name = "desktop_organiser.py"
 
